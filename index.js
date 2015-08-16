@@ -11,7 +11,6 @@
 	;
 
 	global.setTimeout = function setTimeout(fn,delay) {
-		console.log("timer set");
 		return setTimer(
 			/*keepGoing=*/false,
 			/*callback=*/fn,
