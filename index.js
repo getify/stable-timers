@@ -45,10 +45,11 @@
 	global.clearInterval = global.clearTimeout;
 
 	function setTimer(keepGoing,callback,interval,args) {
-		var ts = Date.now() + (+interval || 0);
+		var now = Date.now();
+		var ts = now + (+interval || 0);
 		var id = counter++;
 
-		args.unshift(ts,id,keepGoing,callback);
+		args = [ts,keepGoing,callback].concat(args);
 		queue.push(args);
 		if (!tick) {
 			tick = _setInterval(runTick,default_interval);
@@ -72,7 +73,7 @@
 
 		while (queue.length > 0) {
 			if (queue[0][0] <= ts) {
-				queue[0][3].apply(this,queue[0].slice(3));
+				queue[0][2].apply(this,queue[0].slice(3));
 				queue.shift();
 			}
 			else break;
