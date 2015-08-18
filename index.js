@@ -6,8 +6,9 @@
 		_setInterval = global.setInterval,
 		_clearTimeout = global.clearTimeout,
 		_clearInterval = global.clearInterval,
-		queue = [], tick = null, counter = 0,
-		default_interval = 4
+		timer_entries = [], tick = null, counter = 0,
+		default_interval = 4, next_tick_ts = null,
+		tick_type = 0, needs_sort = false
 	;
 
 	global.setTimeout = function setTimeout(fn,delay) {
@@ -20,17 +21,7 @@
 	};
 
 	global.clearTimeout = function clearTimeout(id) {
-		for (var i=0; i<queue.length; i++) {
-			if (queue[i] && queue[i][1] === id) {
-				queue.splice(i,1);
-				break;
-			}
-		}
-
-		if (queue.length == 0) {
-			_clearInterval(tick);
-			tick = null;
-		}
+		removeTimerEntry(id,/*repeatingInterval=*/false);
 	};
 
 	global.setInterval = function setInterval(fn,delay) {
@@ -42,51 +33,154 @@
 		);
 	};
 
-	global.clearInterval = global.clearTimeout;
+	global.clearInterval = function clearInterval(id) {
+		removeTimerEntry(id,/*repeatingInterval=*/true);
+	};
+
+	function removeTimerEntry(id,repeatingInterval) {
+		for (var i=0; i<timer_entries.length; i++) {
+			// found matching entry?
+			if (timer_entries[i][1] === id &&
+				timer_entries[i][3] === repeatingInterval
+			) {
+				timer_entries.splice(i,1);
+				break;
+			}
+		}
+
+		if (timer_entries.length == 0) {
+			clearTick();
+		}
+	}
+
+	function setupRepeatingTicks() {
+		tick = _setInterval(runTick,default_interval);
+		next_tick_ts = Date.now() + default_interval;
+		tick_type = 0;
+	}
+
+	function clearTick() {
+		if (tick) {
+			// repeating tick?
+			if (tick_type == 0) {
+				_clearInterval(tick);
+			}
+			else {
+				_clearTimeout(tick);
+			}
+		}
+		tick = next_tick_ts = null;
+	}
+
+	// setup one-time tick at adjusted `fromNow` time
+	function adjustTick(fromNow) {
+		clearTick();
+
+		// setup adjustment tick
+		tick = _setTimeout(function adjustmentTick(){
+			tick = null;
+			runTick();
+
+			// resume regular repeating ticks?
+			if (timer_entries.length > 0 && !tick) {
+				setupRepeatingTicks();
+			}
+		},fromNow);
+
+		// calculate appropriate next tick timestamp
+		next_tick_ts = Date.now() + fromNow;
+
+		// adjustment tick will be one-time
+		tick_type = 1;
+	}
 
 	function setTimer(keepGoing,callback,interval,args) {
-		var now = Date.now();
-		var ts = now + (+interval || 0);
-		var id = counter++;
+		var id = counter++, entry_ts;
 
-		args = [ts,keepGoing,callback].concat(args);
-		queue.push(args);
+		interval = Math.max(+interval || 0,0);
+
+		// create timer entry
+		needs_sort = true;
+		entry_ts = Date.now() + interval;
+		timer_entries.push(
+			[
+				/*timestamp=*/entry_ts,
+				/*timerID=*/id,
+				/*interval=*/interval,
+				/*repeat=*/!!keepGoing,
+				/*timerCallback=*/callback
+			].concat(args)
+		);
+
+		// need to setup next tick?
 		if (!tick) {
-			tick = _setInterval(runTick,default_interval);
+			setupRepeatingTicks();
 		}
+		// need to adjust next tick to earlier timestamp?
+		else if (entry_ts < next_tick_ts) {
+			adjustTick(
+				/*nextInterval=*/Math.max(
+					interval,
+					default_interval
+				)
+			);
+		}
+
 		return id;
 	}
 
 	function sortTimers(t1,t2) {
+		// comparing timestamps
 		if (t1[0] < t2[0]) return -1;
 		else if (t1[0] > t2[0]) return 1;
 		else {
+			// comparing monotonically incremented
+			// numeric ID
 			if (t1[1] < t2[1]) return -1;
 			else return 1;
 		}
 	}
 
 	function runTick() {
-		var ts = Date.now();
+		var entry;
 
-		queue.sort(sortTimers);
+		next_tick_ts += default_interval;
 
-		while (queue.length > 0) {
-			if (queue[0][0] <= ts) {
-				queue[0][2].apply(this,queue[0].slice(3));
-				queue.shift();
-			}
-			else break;
+		// timer entries in potentially unsorted order?
+		if (needs_sort && timer_entries.length > 1) {
+			timer_entries.sort(sortTimers);
+			needs_sort = false;
 		}
 
-		if (queue.length == 0) {
-			_clearInterval(tick);
-			tick = null;
+		while (timer_entries.length > 0) {
+			// timer entry ready to run?
+			if (timer_entries[0][0] <= Date.now()) {
+				entry = timer_entries.shift();
+				entry[4].apply(this,entry.slice(5));
+
+				// TODO: re-insert repeating entry
+				// in sorted location
+			}
+			else {
+				// need to adjust next tick to later timestamp?
+				if (tick && next_tick_ts < timer_entries[0][0]) {
+					adjustTick(
+						/*nextInterval=*/Math.max(
+							timer_entries[0][0] - Date.now(),
+							default_interval
+						)
+					);
+				}
+
+				// no more entries to inspect this tick
+				break;
+			}
+		}
+
+		// all entries processed?
+		if (timer_entries.length == 0 && tick != null) {
+			clearTick();
 		}
 	}
 
 })();
-
-
-
-
