@@ -142,7 +142,7 @@
 	}
 
 	function runTick() {
-		var entry;
+		var entry, idx;
 
 		next_tick_ts += default_interval;
 
@@ -158,8 +158,24 @@
 				entry = timer_entries.shift();
 				entry[4].apply(this,entry.slice(5));
 
-				// TODO: re-insert repeating entry
-				// in sorted location
+				// re-insert repeating entry?
+				if (entry[3]) {
+					entry[0] = Date.now() + entry[2];
+					idx = 0;
+
+					// need to find insert index?
+					if (timer_entries.length > 0) {
+						for (var i=0; i<timer_entries.length; i++) {
+							if (timer_entries[i][0] < entry[0]) {
+								idx = i;
+								break;
+							}
+						}
+					}
+
+					// insert at sorted location
+					time_entries.splice(idx,0,entry);
+				}
 			}
 			else {
 				// need to adjust next tick to later timestamp?
