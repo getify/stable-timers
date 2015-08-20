@@ -134,10 +134,15 @@
 		if (t1[0] < t2[0]) return -1;
 		else if (t1[0] > t2[0]) return 1;
 		else {
-			// comparing monotonically incremented
-			// numeric ID
-			if (t1[1] < t2[1]) return -1;
-			else return 1;
+			// comparing expressed timer intervals
+			if (t1[2] < t2[2]) return -1;
+			else if (t1[2] > t2[2]) return 1;
+			else {
+				// comparing monotonically incremented
+				// numeric IDs
+				if (t1[1] < t2[1]) return -1;
+				else return 1;
+			}
 		}
 	}
 

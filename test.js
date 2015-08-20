@@ -5,5 +5,7 @@ setTimeout(function(){
 },1000);
 
 setTimeout(function(){
-	console.log("1");
-},999);
+	setTimeout(function(){
+		console.log("1");
+	},497);
+},500);
