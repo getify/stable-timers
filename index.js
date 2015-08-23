@@ -20,7 +20,7 @@
 		);
 	};
 
-	global.clearTimeout = function clearTimeout(id) {
+	global.clearTimeout2 = function clearTimeout(id) {
 		removeTimerEntry(id,/*repeatingInterval=*/false);
 	};
 
