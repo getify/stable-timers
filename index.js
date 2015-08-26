@@ -8,34 +8,35 @@
 		_clearInterval = global.clearInterval,
 		timer_entries = [], tick = null, counter = 0,
 		default_interval = 4, next_tick_ts = null,
-		tick_type = 0, needs_sort = false
+		tick_type = 0, needs_sort = false,
+		public_api
 	;
 
-	global.setTimeout = function setTimeout(fn,delay) {
+	function setTimeout(fn,delay) {
 		return setTimer(
 			/*keepGoing=*/false,
 			/*callback=*/fn,
 			/*interval=*/delay,
 			/*args=*/[].slice.call(arguments,2)
 		);
-	};
+	}
 
-	global.clearTimeout2 = function clearTimeout(id) {
+	function clearTimeout(id) {
 		removeTimerEntry(id,/*repeatingInterval=*/false);
-	};
+	}
 
-	global.setInterval = function setInterval(fn,delay) {
+	function setInterval(fn,delay) {
 		return setTimer(
 			/*keepGoing=*/true,
 			/*callback=*/fn,
 			/*interval=*/delay,
 			/*args=*/[].slice.call(arguments,2)
 		);
-	};
+	}
 
-	global.clearInterval = function clearInterval(id) {
+	function clearInterval(id) {
 		removeTimerEntry(id,/*repeatingInterval=*/true);
-	};
+	}
 
 	function removeTimerEntry(id,repeatingInterval) {
 		for (var i=0; i<timer_entries.length; i++) {
@@ -203,5 +204,14 @@
 			clearTick();
 		}
 	}
+
+	public_api = {
+		setTimeout: setTimeout,
+		clearTimeout: clearTimeout,
+		setInterval: setInterval,
+		clearInterval: clearInterval
+	};
+
+	return public_api;
 
 })();
