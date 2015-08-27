@@ -1,15 +1,24 @@
-(function stableTimers(){
+/*! stable-timers
+    v0.0.1 (c) Kyle Simpson
+    MIT License: http://getify.mit-license.org
+*/
+
+(function UMD(name,context,definition){
+	if (typeof define === "function" && define.amd) { define(definition); }
+	else if (typeof module !== "undefined" && module.exports) { module.exports = definition(); }
+	else { context[name] = definition(name,context); }
+})("StableTimers",this,function DEF(){
 	"use strict";
 
 	var global = Function("return this")(),
+		timer_entries = [], tick = null, counter = 0,
+		default_interval = 4, next_tick_ts = null,
+		tick_type = 0, needs_sort = false, public_api,
+
 		_setTimeout = global.setTimeout,
 		_setInterval = global.setInterval,
 		_clearTimeout = global.clearTimeout,
-		_clearInterval = global.clearInterval,
-		timer_entries = [], tick = null, counter = 0,
-		default_interval = 4, next_tick_ts = null,
-		tick_type = 0, needs_sort = false,
-		public_api
+		_clearInterval = global.clearInterval
 	;
 
 	function setTimeout(fn,delay) {
@@ -205,7 +214,18 @@
 		}
 	}
 
+	function replaceGlobals() {
+		global.setTimeout = setTimeout;
+		global.clearTimeout = clearTimeout;
+		global.setInterval = setInterval;
+		global.clearInterval = clearInterval;
+
+		return public_api;
+	}
+
 	public_api = {
+		replaceGlobals: replaceGlobals,
+
 		setTimeout: setTimeout,
 		clearTimeout: clearTimeout,
 		setInterval: setInterval,
@@ -213,5 +233,4 @@
 	};
 
 	return public_api;
-
-})();
+});

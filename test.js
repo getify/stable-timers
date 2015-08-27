@@ -1,11 +1,11 @@
-require("./index.js");
+var stable_timers = require("./index.js");
 
-setTimeout(function(){
+stable_timers.setTimeout(function(){
 	console.log("2");
 },1000);
 
-setTimeout(function(){
-	setTimeout(function(){
+stable_timers.setTimeout(function(){
+	stable_timers.setTimeout(function(){
 		console.log("1");
 	},497);
 },500);
