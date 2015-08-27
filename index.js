@@ -53,6 +53,7 @@
 			if (timer_entries[i][1] === id &&
 				timer_entries[i][3] === repeatingInterval
 			) {
+				// remove entry
 				timer_entries.splice(i,1);
 				break;
 			}
@@ -63,14 +64,14 @@
 		}
 	}
 
-	function setupRepeatingTicks() {
+	function setupTickClock(now) {
 		tick = _setInterval(runTick,default_interval);
-		next_tick_ts = Date.now() + default_interval;
+		next_tick_ts = now + default_interval;
 		tick_type = 0;
 	}
 
 	function clearTick() {
-		if (tick) {
+		if (tick != null) {
 			// repeating tick?
 			if (tick_type == 0) {
 				_clearInterval(tick);
@@ -82,8 +83,8 @@
 		tick = next_tick_ts = null;
 	}
 
-	// setup one-time tick at adjusted `fromNow` time
-	function adjustTick(fromNow) {
+	// setup one-time tick at adjusted `nextTS` time
+	function adjustTick(nowTS,nextTS,nextInterval) {
 		clearTick();
 
 		// setup adjustment tick
@@ -92,45 +93,52 @@
 			runTick();
 
 			// resume regular repeating ticks?
-			if (timer_entries.length > 0 && !tick) {
-				setupRepeatingTicks();
+			if (timer_entries.length > 0 && tick == null) {
+				setupTickClock(nowTS);
 			}
-		},fromNow);
+		},nextInterval);
 
-		// calculate appropriate next tick timestamp
-		next_tick_ts = Date.now() + fromNow;
+		next_tick_ts = nextTS;
 
 		// adjustment tick will be one-time
 		tick_type = 1;
 	}
 
 	function setTimer(keepGoing,callback,interval,args) {
-		var id = counter++, entry_ts;
+		var id = counter++, entry_ts, now = Date.now();
 
 		interval = Math.max(+interval || 0,0);
 
 		// create timer entry
-		needs_sort = true;
-		entry_ts = Date.now() + interval;
+		entry_ts = now + interval;
 		timer_entries.push(
 			[
 				/*timestamp=*/entry_ts,
 				/*timerID=*/id,
 				/*interval=*/interval,
 				/*repeat=*/!!keepGoing,
-				/*timerCallback=*/callback
-			].concat(args)
+				/*timerCallback=*/callback,
+				/*args=*/args
+			]
 		);
+		needs_sort = true;
 
 		// need to setup next tick?
-		if (!tick) {
-			setupRepeatingTicks();
+		if (tick == null) {
+			setupTickClock(now);
 		}
 		// need to adjust next tick to earlier timestamp?
 		else if (entry_ts < next_tick_ts) {
 			adjustTick(
+				/*nowTS=*/now,
+				/*nextTS=*/Math.max(
+					entry_ts,
+					// clamp minimum timestamp
+					(now + default_interval)
+				),
 				/*nextInterval=*/Math.max(
 					interval,
+					// clamp minimum interval
 					default_interval
 				)
 			);
@@ -157,7 +165,7 @@
 	}
 
 	function runTick() {
-		var entry, idx;
+		var entry, idx, now = Date.now();
 
 		next_tick_ts += default_interval;
 
@@ -168,19 +176,29 @@
 		}
 
 		while (timer_entries.length > 0) {
-			// timer entry ready to run?
+			// next timer entry ready to run at this moment?
+			// note: using `Date.now()` here instead of `now`
+			//   to make sure to take into account how long
+			//   previous entries have taken to run on this tick
 			if (timer_entries[0][0] <= Date.now()) {
+				// extract and run entry
 				entry = timer_entries.shift();
-				entry[4].apply(this,entry.slice(5));
+				entry[4].apply(this,entry[5]);
 
-				// re-insert repeating entry?
+				// re-insert repeating entry (aka setInterval)?
 				if (entry[3]) {
-					entry[0] = Date.now() + entry[2];
+					// update to next timestamp
+					// note: using `now` here instead of `Date.now()`
+					//   to prevent the entry from being relative to
+					//   how long previous entries have taken to run
+					//   on this tick
+					entry[0] = entry[2] + now;
 					idx = 0;
 
-					// need to find insert index?
+					// need to find (sorted) insert index?
 					if (timer_entries.length > 0) {
 						for (var i=0; i<timer_entries.length; i++) {
+							// found the first entry later than new entry
 							if (timer_entries[i][0] < entry[0]) {
 								idx = i;
 								break;
@@ -188,18 +206,21 @@
 						}
 					}
 
-					// insert at sorted location
+					// insert entry at correct (sorted) location
 					time_entries.splice(idx,0,entry);
 				}
 			}
 			else {
 				// need to adjust next tick to later timestamp?
-				if (tick && next_tick_ts < timer_entries[0][0]) {
+				if (tick != null && next_tick_ts < timer_entries[0][0]) {
+					// note: using `now` here instead of `Date.now()`
+					//   to prevent the adjustment from being relative
+					//   to how long previous entries have taken to run
+					//   on this tick
 					adjustTick(
-						/*nextInterval=*/Math.max(
-							timer_entries[0][0] - Date.now(),
-							default_interval
-						)
+						/*nowTS=*/now,
+						/*nextTS=*/timer_entries[0][0],
+						/*nextInterval=*/(timer_entries[0][0] - now)
 					);
 				}
 
@@ -209,11 +230,12 @@
 		}
 
 		// all entries processed?
-		if (timer_entries.length == 0 && tick != null) {
+		if (timer_entries.length == 0) {
 			clearTick();
 		}
 	}
 
+	// overwrite the global timer APIs directly
 	function replaceGlobals() {
 		global.setTimeout = setTimeout;
 		global.clearTimeout = clearTimeout;
