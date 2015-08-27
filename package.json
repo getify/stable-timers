@@ -1,0 +1,28 @@
+{
+	"name": "stable-timers",
+	"version": "0.0.1",
+	"description": "stablizing timer behavior",
+	"main": "./index.js",
+	"scripts": {
+		"test": "./test.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git://github.com/getify/stable-timers.git"
+	},
+	"keywords": [
+		"async",
+		"flow-control",
+		"sequences",
+		"promise",
+		"iterator",
+		"generator"
+	],
+	"bugs": {
+		"url": "https://github.com/getify/stable-timers/issues",
+		"email": "getify@gmail.com"
+	},
+	"homepage": "http://github.com/getify/stable-timers",
+	"author": "Kyle Simpson <getify@gmail.com>",
+	"license": "MIT"
+}
