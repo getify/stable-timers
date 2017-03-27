@@ -1,10 +1,10 @@
 {
 	"name": "stable-timers",
-	"version": "0.0.1",
+	"version": "1.0.0",
 	"description": "stablizing timer behavior",
 	"main": "./index.js",
 	"scripts": {
-		"test": "./test.js"
+		"test": "node test.js"
 	},
 	"repository": {
 		"type": "git",

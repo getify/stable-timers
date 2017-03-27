@@ -1,5 +1,5 @@
 /*! stable-timers
-    v0.0.1 (c) Kyle Simpson
+    v1.0.0 (c) Kyle Simpson
     MIT License: http://getify.mit-license.org
 */
 
@@ -20,6 +20,20 @@
 		_clearTimeout = global.clearTimeout,
 		_clearInterval = global.clearInterval
 	;
+
+	public_api = {
+		replaceGlobals: replaceGlobals,
+
+		setTimeout: setTimeout,
+		clearTimeout: clearTimeout,
+		setInterval: setInterval,
+		clearInterval: clearInterval
+	};
+
+	return public_api;
+
+
+	// ***********************************************
 
 	function setTimeout(fn,delay) {
 		return setTimer(
@@ -244,15 +258,4 @@
 
 		return public_api;
 	}
-
-	public_api = {
-		replaceGlobals: replaceGlobals,
-
-		setTimeout: setTimeout,
-		clearTimeout: clearTimeout,
-		setInterval: setInterval,
-		clearInterval: clearInterval
-	};
-
-	return public_api;
 });
